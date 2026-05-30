@@ -43,34 +43,17 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// ============ 1. ADMIN SETUP (One-time use) ============
+// ============ ADMIN SETUP - DISABLED FOR SECURITY ============
+// This endpoint has been disabled to prevent unauthorized admin creation.
+// Admin can only be created manually via Firebase Console.
 app.post('/api/admin/setup', async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    
-    const adminsCount = await db.collection('admins').get();
-    if (!adminsCount.empty) {
-      return res.status(403).json({ success: false, message: 'Setup already completed' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    await db.collection('admins').add({
-      email,
-      passwordHash,
-      name: name || 'Super Admin',
-      role: 'super-admin',
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    res.json({ success: true, message: 'Admin created successfully' });
-  } catch (error) {
-    console.error('Setup error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  return res.status(403).json({ 
+    success: false, 
+    message: 'Admin setup is disabled for security. Please contact system administrator.' 
+  });
 });
 
-// ============ 2. ADMIN LOGIN ============
+// ============ 1. ADMIN LOGIN ============
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -119,12 +102,12 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
-// ============ 3. VERIFY TOKEN ============
+// ============ 2. VERIFY TOKEN ============
 app.post('/api/admin/verify', verifyToken, (req, res) => {
   res.json({ success: true, admin: req.admin });
 });
 
-// ============ 4. CREATE NEW ARTICLE ============
+// ============ 3. CREATE NEW ARTICLE ============
 app.post('/api/admin/articles', verifyToken, async (req, res) => {
   try {
     const {
@@ -178,7 +161,7 @@ app.post('/api/admin/articles', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 5. UPDATE ARTICLE ============
+// ============ 4. UPDATE ARTICLE ============
 app.put('/api/admin/articles/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -233,7 +216,7 @@ app.put('/api/admin/articles/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 6. DELETE ARTICLE ============
+// ============ 5. DELETE ARTICLE ============
 app.delete('/api/admin/articles/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -245,7 +228,7 @@ app.delete('/api/admin/articles/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 7. GET SINGLE ARTICLE BY SLUG (Public) ============
+// ============ 6. GET SINGLE ARTICLE BY SLUG (Public) ============
 app.get('/api/articles/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -273,7 +256,7 @@ app.get('/api/articles/slug/:slug', async (req, res) => {
   }
 });
 
-// ============ 8. GET ALL ARTICLES (Public - with pagination & category filter) ============
+// ============ 7. GET ALL ARTICLES (Public - with pagination & category filter) ============
 app.get('/api/articles', async (req, res) => {
   try {
     const { limit = 10, page = 1, category } = req.query;
@@ -312,7 +295,7 @@ app.get('/api/articles', async (req, res) => {
   }
 });
 
-// ============ 9. GET ALL ARTICLES FOR ADMIN ============
+// ============ 8. GET ALL ARTICLES FOR ADMIN ============
 app.get('/api/admin/articles', verifyToken, async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -331,7 +314,7 @@ app.get('/api/admin/articles', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 10. GET SINGLE ARTICLE BY ID (Admin) ============
+// ============ 9. GET SINGLE ARTICLE BY ID (Admin) ============
 app.get('/api/admin/articles/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -348,7 +331,7 @@ app.get('/api/admin/articles/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 11. CATEGORIES - GET ALL ============
+// ============ 10. CATEGORIES - GET ALL ============
 app.get('/api/admin/categories/list', verifyToken, async (req, res) => {
   try {
     const categoriesSnapshot = await db.collection('categories').get();
@@ -363,7 +346,7 @@ app.get('/api/admin/categories/list', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 12. CATEGORIES - CREATE ============
+// ============ 11. CATEGORIES - CREATE ============
 app.post('/api/admin/categories', verifyToken, async (req, res) => {
   try {
     const { name, slug, description } = req.body;
@@ -384,7 +367,7 @@ app.post('/api/admin/categories', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 13. CATEGORIES - DELETE ============
+// ============ 12. CATEGORIES - DELETE ============
 app.delete('/api/admin/categories/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -396,7 +379,7 @@ app.delete('/api/admin/categories/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 14. PUBLIC CATEGORIES (for index page) ============
+// ============ 13. PUBLIC CATEGORIES (for index page) ============
 app.get('/api/categories/all', async (req, res) => {
   try {
     const categoriesSnapshot = await db.collection('categories').get();
@@ -411,7 +394,7 @@ app.get('/api/categories/all', async (req, res) => {
   }
 });
 
-// ============ 15. VERSES (Quran & Hadith) - GET ALL ============
+// ============ 14. VERSES (Quran & Hadith) - GET ALL ============
 app.get('/api/admin/verses', verifyToken, async (req, res) => {
   try {
     const versesSnapshot = await db.collection('verses').orderBy('createdAt', 'desc').get();
@@ -426,7 +409,7 @@ app.get('/api/admin/verses', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 16. VERSES - CREATE ============
+// ============ 15. VERSES - CREATE ============
 app.post('/api/admin/verses', verifyToken, async (req, res) => {
   try {
     const { content, type } = req.body;
@@ -446,7 +429,7 @@ app.post('/api/admin/verses', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 17. VERSES - DELETE ============
+// ============ 16. VERSES - DELETE ============
 app.delete('/api/admin/verses/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -458,7 +441,7 @@ app.delete('/api/admin/verses/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 18. PUBLIC VERSES (Random for index page) - WITH FALLBACK ============
+// ============ 17. PUBLIC VERSES (Random for index page) - WITH FALLBACK ============
 app.get('/api/verses/random', async (req, res) => {
   try {
     const { type } = req.query;
@@ -473,7 +456,6 @@ app.get('/api/verses/random', async (req, res) => {
     });
     
     if (verses.length === 0) {
-      // Return fallback verses if database is empty
       if (type === 'quran') {
         const fallbackVerse = {
           content: `
@@ -504,7 +486,6 @@ app.get('/api/verses/random', async (req, res) => {
     res.json({ success: true, verse: randomVerse });
   } catch (error) {
     console.error('Random verse error:', error);
-    // Return fallback on error
     const fallbackVerse = {
       content: `
         <div style="text-align: center; font-size: 1.2rem; line-height: 1.8;">
@@ -518,7 +499,7 @@ app.get('/api/verses/random', async (req, res) => {
   }
 });
 
-// ============ 19. GET FEATURED ARTICLES (Most viewed) ============
+// ============ 18. GET FEATURED ARTICLES (Most viewed) ============
 app.get('/api/articles/featured', async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -538,7 +519,7 @@ app.get('/api/articles/featured', async (req, res) => {
   }
 });
 
-// ============ 20. SEARCH ARTICLES ============
+// ============ 19. SEARCH ARTICLES ============
 app.get('/api/articles/search', async (req, res) => {
   try {
     const { q } = req.query;
@@ -571,7 +552,7 @@ app.get('/api/articles/search', async (req, res) => {
   }
 });
 
-// ============ 21. HEALTH CHECK ============
+// ============ 20. HEALTH CHECK ============
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -581,8 +562,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📝 Available endpoints:`);
-  console.log(`   POST   /api/admin/setup`);
   console.log(`   POST   /api/admin/login`);
+  console.log(`   POST   /api/admin/verify`);
   console.log(`   GET    /api/articles`);
   console.log(`   GET    /api/articles/slug/:slug`);
   console.log(`   GET    /api/articles/search`);
@@ -592,6 +573,7 @@ app.listen(PORT, () => {
   console.log(`   POST   /api/admin/articles (Admin)`);
   console.log(`   PUT    /api/admin/articles/:id (Admin)`);
   console.log(`   DELETE /api/admin/articles/:id (Admin)`);
+  console.log(`   GET    /api/admin/articles (Admin)`);
   console.log(`   GET    /api/admin/categories/list (Admin)`);
   console.log(`   POST   /api/admin/categories (Admin)`);
   console.log(`   DELETE /api/admin/categories/:id (Admin)`);
