@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const app = express();
 
-// ============ IMPORTANT: Increased body limit for large articles with images ============
+// ============ Increased body limit for large articles with images ============
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -142,7 +142,6 @@ app.post('/api/admin/articles', verifyToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Title, slug and content are required' });
     }
 
-    // Check if slug already exists
     const existingSlug = await db.collection('articles')
       .where('slug', '==', slug)
       .get();
@@ -198,7 +197,6 @@ app.put('/api/admin/articles/:id', verifyToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Title, slug and content are required' });
     }
 
-    // Check if slug exists for other article
     const existingSlug = await db.collection('articles')
       .where('slug', '==', slug)
       .get();
@@ -264,7 +262,6 @@ app.get('/api/articles/slug/:slug', async (req, res) => {
     const doc = articleSnapshot.docs[0];
     const article = { id: doc.id, ...doc.data() };
     
-    // Increment views
     await db.collection('articles').doc(doc.id).update({
       views: admin.firestore.FieldValue.increment(1)
     });
@@ -315,7 +312,7 @@ app.get('/api/articles', async (req, res) => {
   }
 });
 
-// ============ 9. GET ALL ARTICLES FOR ADMIN (with full data) ============
+// ============ 9. GET ALL ARTICLES FOR ADMIN ============
 app.get('/api/admin/articles', verifyToken, async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -351,21 +348,14 @@ app.get('/api/admin/articles/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 11. GET ALL CATEGORIES ============
-app.get('/api/categories', async (req, res) => {
+// ============ 11. CATEGORIES - GET ALL ============
+app.get('/api/admin/categories/list', verifyToken, async (req, res) => {
   try {
     const categoriesSnapshot = await db.collection('categories').get();
-    
-    if (categoriesSnapshot.empty) {
-      const defaultCategories = ['اسلامی مضامین', 'رمضان', 'حدیث', 'قرآن', 'سنت', 'دعا'];
-      return res.json({ success: true, categories: defaultCategories });
-    }
-    
     const categories = [];
     categoriesSnapshot.forEach(doc => {
-      categories.push(doc.data().name);
+      categories.push({ id: doc.id, ...doc.data() });
     });
-    
     res.json({ success: true, categories });
   } catch (error) {
     console.error('Get categories error:', error);
@@ -373,32 +363,146 @@ app.get('/api/categories', async (req, res) => {
   }
 });
 
-// ============ 12. CREATE/UPDATE CATEGORY (Admin) ============
+// ============ 12. CATEGORIES - CREATE ============
 app.post('/api/admin/categories', verifyToken, async (req, res) => {
   try {
     const { name, slug, description } = req.body;
-    
     if (!name) {
       return res.status(400).json({ success: false, message: 'Category name required' });
     }
-    
     const categoryData = {
       name,
       slug: slug || name.toLowerCase().replace(/ /g, '-'),
       description: description || '',
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     };
-    
-    await db.collection('categories').add(categoryData);
-    
-    res.json({ success: true, message: 'Category created successfully' });
+    const docRef = await db.collection('categories').add(categoryData);
+    res.json({ success: true, message: 'Category created', id: docRef.id });
   } catch (error) {
     console.error('Create category error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// ============ 13. SEARCH ARTICLES (Public) ============
+// ============ 13. CATEGORIES - DELETE ============
+app.delete('/api/admin/categories/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.collection('categories').doc(id).delete();
+    res.json({ success: true, message: 'Category deleted' });
+  } catch (error) {
+    console.error('Delete category error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ 14. PUBLIC CATEGORIES (for index page) ============
+app.get('/api/categories/all', async (req, res) => {
+  try {
+    const categoriesSnapshot = await db.collection('categories').get();
+    const categories = [];
+    categoriesSnapshot.forEach(doc => {
+      categories.push({ id: doc.id, ...doc.data() });
+    });
+    res.json({ success: true, categories });
+  } catch (error) {
+    console.error('Get public categories error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ 15. VERSES (Quran & Hadith) - GET ALL ============
+app.get('/api/admin/verses', verifyToken, async (req, res) => {
+  try {
+    const versesSnapshot = await db.collection('verses').orderBy('createdAt', 'desc').get();
+    const verses = [];
+    versesSnapshot.forEach(doc => {
+      verses.push({ id: doc.id, ...doc.data() });
+    });
+    res.json({ success: true, verses });
+  } catch (error) {
+    console.error('Get verses error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ 16. VERSES - CREATE ============
+app.post('/api/admin/verses', verifyToken, async (req, res) => {
+  try {
+    const { content, type } = req.body;
+    if (!content || !type) {
+      return res.status(400).json({ success: false, message: 'Content and type required' });
+    }
+    const verseData = {
+      content,
+      type,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    const docRef = await db.collection('verses').add(verseData);
+    res.json({ success: true, message: 'Verse added', id: docRef.id });
+  } catch (error) {
+    console.error('Create verse error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ 17. VERSES - DELETE ============
+app.delete('/api/admin/verses/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.collection('verses').doc(id).delete();
+    res.json({ success: true, message: 'Verse deleted' });
+  } catch (error) {
+    console.error('Delete verse error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ 18. PUBLIC VERSES (Random for index page) ============
+app.get('/api/verses/random', async (req, res) => {
+  try {
+    const { type } = req.query;
+    let query = db.collection('verses');
+    if (type && (type === 'quran' || type === 'hadith')) {
+      query = query.where('type', '==', type);
+    }
+    const snapshot = await query.get();
+    const verses = [];
+    snapshot.forEach(doc => {
+      verses.push({ id: doc.id, ...doc.data() });
+    });
+    if (verses.length === 0) {
+      return res.json({ success: true, verse: null });
+    }
+    const randomVerse = verses[Math.floor(Math.random() * verses.length)];
+    res.json({ success: true, verse: randomVerse });
+  } catch (error) {
+    console.error('Random verse error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ 19. GET FEATURED ARTICLES (Most viewed) ============
+app.get('/api/articles/featured', async (req, res) => {
+  try {
+    const articlesSnapshot = await db.collection('articles')
+      .orderBy('views', 'desc')
+      .limit(6)
+      .get();
+    
+    const articles = [];
+    articlesSnapshot.forEach(doc => {
+      articles.push({ id: doc.id, ...doc.data() });
+    });
+    
+    res.json({ success: true, articles });
+  } catch (error) {
+    console.error('Get featured error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============ 20. SEARCH ARTICLES ============
 app.get('/api/articles/search', async (req, res) => {
   try {
     const { q } = req.query;
@@ -431,27 +535,7 @@ app.get('/api/articles/search', async (req, res) => {
   }
 });
 
-// ============ 14. GET FEATURED ARTICLES (Homepage) ============
-app.get('/api/articles/featured', async (req, res) => {
-  try {
-    const articlesSnapshot = await db.collection('articles')
-      .orderBy('views', 'desc')
-      .limit(6)
-      .get();
-    
-    const articles = [];
-    articlesSnapshot.forEach(doc => {
-      articles.push({ id: doc.id, ...doc.data() });
-    });
-    
-    res.json({ success: true, articles });
-  } catch (error) {
-    console.error('Get featured error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ============ 15. HEALTH CHECK ============
+// ============ 21. HEALTH CHECK ============
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -463,16 +547,21 @@ app.listen(PORT, () => {
   console.log(`📝 Available endpoints:`);
   console.log(`   POST   /api/admin/setup`);
   console.log(`   POST   /api/admin/login`);
-  console.log(`   POST   /api/admin/verify`);
   console.log(`   GET    /api/articles`);
   console.log(`   GET    /api/articles/slug/:slug`);
   console.log(`   GET    /api/articles/search`);
   console.log(`   GET    /api/articles/featured`);
+  console.log(`   GET    /api/verses/random`);
+  console.log(`   GET    /api/categories/all`);
   console.log(`   POST   /api/admin/articles (Admin)`);
   console.log(`   PUT    /api/admin/articles/:id (Admin)`);
   console.log(`   DELETE /api/admin/articles/:id (Admin)`);
-  console.log(`   GET    /api/admin/articles (Admin)`);
-  console.log(`   GET    /api/categories`);
+  console.log(`   GET    /api/admin/categories/list (Admin)`);
+  console.log(`   POST   /api/admin/categories (Admin)`);
+  console.log(`   DELETE /api/admin/categories/:id (Admin)`);
+  console.log(`   GET    /api/admin/verses (Admin)`);
+  console.log(`   POST   /api/admin/verses (Admin)`);
+  console.log(`   DELETE /api/admin/verses/:id (Admin)`);
 });
 
 module.exports = app;
