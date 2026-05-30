@@ -550,7 +550,7 @@ app.get('/api/articles/search', async (req, res) => {
   }
 });
 
-// ============ 20. SITEMAP.XML - Dynamic sitemap for Google crawling (FIXED) ============
+// ============ 20. SITEMAP.XML - Dynamic sitemap for Google crawling (FIXED with proper escaping) ============
 app.get('/sitemap.xml', async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -577,8 +577,9 @@ app.get('/sitemap.xml', async (req, res) => {
       const articleDate = article.updatedAt?.toDate() || article.createdAt?.toDate() || new Date();
       const lastmod = articleDate.toISOString().split('T')[0];
       
-      // Escape special characters in title for XML
-      const escapedTitle = article.title
+      // Escape special characters in title for XML (CRITICAL FIX)
+      let escapedTitle = article.title || '';
+      escapedTitle = escapedTitle
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -618,7 +619,7 @@ User-agent: *
 Allow: /
 Disallow: /admin-login.html
 Disallow: /admin-panel.html
-Sitemap: https://zulqarnain-hanafi-barelvi.lovestoblog.com/sitemap.xml
+Sitemap: https://zulqarnain-hanafi-barelvi.lovestoblog.com/sitemap.php
 Crawl-delay: 1
 Host: https://zulqarnain-hanafi-barelvi.lovestoblog.com
 `;
