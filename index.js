@@ -44,8 +44,6 @@ const verifyToken = (req, res, next) => {
 };
 
 // ============ ADMIN SETUP - DISABLED FOR SECURITY ============
-// This endpoint has been disabled to prevent unauthorized admin creation.
-// Admin can only be created manually via Firebase Console.
 app.post('/api/admin/setup', async (req, res) => {
   return res.status(403).json({ 
     success: false, 
@@ -552,7 +550,78 @@ app.get('/api/articles/search', async (req, res) => {
   }
 });
 
-// ============ 20. HEALTH CHECK ============
+// ============ 20. SITEMAP.XML - Dynamic sitemap for Google crawling ============
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    // Fetch all articles
+    const articlesSnapshot = await db.collection('articles')
+      .orderBy('createdAt', 'desc')
+      .get();
+    
+    const baseUrl = 'https://zulqarnain-hanafi-barelvi.lovestoblog.com';
+    const backendUrl = 'https://zulqarnain-alhanafi.vercel.app';
+    
+    let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n';
+    sitemap += '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n';
+    
+    // Homepage
+    sitemap += '  <url>\n';
+    sitemap += `    <loc>${baseUrl}/</loc>\n`;
+    sitemap += '    <lastmod>' + new Date().toISOString().split('T')[0] + '</lastmod>\n';
+    sitemap += '    <changefreq>daily</changefreq>\n';
+    sitemap += '    <priority>1.0</priority>\n';
+    sitemap += '  </url>\n';
+    
+    // Add all articles to sitemap
+    articlesSnapshot.forEach(doc => {
+      const article = doc.data();
+      const articleDate = article.updatedAt?.toDate() || article.createdAt?.toDate() || new Date();
+      const lastmod = articleDate.toISOString().split('T')[0];
+      
+      sitemap += '  <url>\n';
+      sitemap += `    <loc>${baseUrl}/post.html?slug=${article.slug}</loc>\n`;
+      sitemap += `    <lastmod>${lastmod}</lastmod>\n`;
+      sitemap += '    <changefreq>weekly</changefreq>\n';
+      sitemap += '    <priority>0.8</priority>\n';
+      
+      // Add image to sitemap if featured image exists
+      if (article.featuredImage) {
+        sitemap += '    <image:image>\n';
+        sitemap += `      <image:loc>${article.featuredImage}</image:loc>\n`;
+        sitemap += `      <image:title><![CDATA[${article.title}]]></image:title>\n`;
+        sitemap += '    </image:image>\n';
+      }
+      
+      sitemap += '  </url>\n';
+    });
+    
+    sitemap += '</urlset>';
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(sitemap);
+  } catch (error) {
+    console.error('Sitemap error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
+// ============ 21. ROBOTS.TXT endpoint (optional) ============
+app.get('/robots.txt', (req, res) => {
+  const robots = `# robots.txt for مناظرِ اہلسنت وجماعت
+User-agent: *
+Allow: /
+Disallow: /admin-login.html
+Disallow: /admin-panel.html
+Sitemap: https://zulqarnain-hanafi-barelvi.lovestoblog.com/sitemap.xml
+Crawl-delay: 1
+Host: https://zulqarnain-hanafi-barelvi.lovestoblog.com
+`;
+  res.header('Content-Type', 'text/plain');
+  res.send(robots);
+});
+
+// ============ 22. HEALTH CHECK ============
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -570,6 +639,8 @@ app.listen(PORT, () => {
   console.log(`   GET    /api/articles/featured`);
   console.log(`   GET    /api/verses/random`);
   console.log(`   GET    /api/categories/all`);
+  console.log(`   GET    /sitemap.xml`);
+  console.log(`   GET    /robots.txt`);
   console.log(`   POST   /api/admin/articles (Admin)`);
   console.log(`   PUT    /api/admin/articles/:id (Admin)`);
   console.log(`   DELETE /api/admin/articles/:id (Admin)`);
