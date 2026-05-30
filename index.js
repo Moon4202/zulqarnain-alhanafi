@@ -281,9 +281,7 @@ app.get('/api/articles', async (req, res) => {
     
     let query = db.collection('articles').orderBy('createdAt', 'desc');
     
-    // Fix: Properly handle category filter with Unicode/Urdu text
     if (category && category !== 'all' && category !== 'undefined' && category !== 'null') {
-      // Decode URI component if needed and compare as string
       const decodedCategory = decodeURIComponent(category);
       query = query.where('category', '==', decodedCategory);
     }
@@ -460,7 +458,7 @@ app.delete('/api/admin/verses/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 18. PUBLIC VERSES (Random for index page) ============
+// ============ 18. PUBLIC VERSES (Random for index page) - WITH FALLBACK ============
 app.get('/api/verses/random', async (req, res) => {
   try {
     const { type } = req.query;
@@ -473,14 +471,50 @@ app.get('/api/verses/random', async (req, res) => {
     snapshot.forEach(doc => {
       verses.push({ id: doc.id, ...doc.data() });
     });
+    
     if (verses.length === 0) {
+      // Return fallback verses if database is empty
+      if (type === 'quran') {
+        const fallbackVerse = {
+          content: `
+            <div style="text-align: center; font-size: 1.2rem; line-height: 1.8;">
+              "إِنَّ اللَّهَ مَعَ الَّذِينَ اتَّقَوْا وَالَّذِينَ هُمْ مُحْسِنُونَ"
+              <span style="display: block; margin-top: 12px; font-size: 1rem;">بیشک اللہ پرہیزگاروں اور نیکوکاروں کے ساتھ ہے</span>
+              <span style="display: block; margin-top: 8px; font-size: 0.75rem; color: #b47c44;">(سورۃ النحل: 128)</span>
+            </div>
+          `
+        };
+        return res.json({ success: true, verse: fallbackVerse });
+      } else if (type === 'hadith') {
+        const fallbackHadith = {
+          content: `
+            <div style="text-align: center;">
+              «مَن لَا یَرحَمُ النَّاسَ لَا یَرحَمُہُ اللہ»
+              <span style="display: block; margin-top: 12px; font-size: 1rem;">جو لوگوں پر رحم نہیں کرتا اللہ اس پر رحم نہیں فرماتا</span>
+              <span style="display: block; margin-top: 8px; font-size: 0.75rem; color: #b47c44;">(صحیح بخاری)</span>
+            </div>
+          `
+        };
+        return res.json({ success: true, verse: fallbackHadith });
+      }
       return res.json({ success: true, verse: null });
     }
+    
     const randomVerse = verses[Math.floor(Math.random() * verses.length)];
     res.json({ success: true, verse: randomVerse });
   } catch (error) {
     console.error('Random verse error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    // Return fallback on error
+    const fallbackVerse = {
+      content: `
+        <div style="text-align: center; font-size: 1.2rem; line-height: 1.8;">
+          "إِنَّ اللَّهَ مَعَ الصَّابِرِينَ"
+          <span style="display: block; margin-top: 12px; font-size: 1rem;">بیشک اللہ صبر کرنے والوں کے ساتھ ہے</span>
+          <span style="display: block; margin-top: 8px; font-size: 0.75rem; color: #b47c44;">(سورۃ البقرہ: 153)</span>
+        </div>
+      `
+    };
+    res.json({ success: true, verse: fallbackVerse });
   }
 });
 
