@@ -550,16 +550,14 @@ app.get('/api/articles/search', async (req, res) => {
   }
 });
 
-// ============ 20. SITEMAP.XML - Dynamic sitemap for Google crawling ============
+// ============ 20. SITEMAP.XML - Dynamic sitemap for Google crawling (FIXED) ============
 app.get('/sitemap.xml', async (req, res) => {
   try {
-    // Fetch all articles
     const articlesSnapshot = await db.collection('articles')
       .orderBy('createdAt', 'desc')
       .get();
     
     const baseUrl = 'https://zulqarnain-hanafi-barelvi.lovestoblog.com';
-    const backendUrl = 'https://zulqarnain-alhanafi.vercel.app';
     
     let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
     sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n';
@@ -579,17 +577,24 @@ app.get('/sitemap.xml', async (req, res) => {
       const articleDate = article.updatedAt?.toDate() || article.createdAt?.toDate() || new Date();
       const lastmod = articleDate.toISOString().split('T')[0];
       
+      // Escape special characters in title for XML
+      const escapedTitle = article.title
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+      
       sitemap += '  <url>\n';
-      sitemap += `    <loc>${baseUrl}/post.html?slug=${article.slug}</loc>\n`;
+      sitemap += `    <loc>${baseUrl}/post.html?slug=${encodeURIComponent(article.slug)}</loc>\n`;
       sitemap += `    <lastmod>${lastmod}</lastmod>\n`;
       sitemap += '    <changefreq>weekly</changefreq>\n';
       sitemap += '    <priority>0.8</priority>\n';
       
-      // Add image to sitemap if featured image exists
       if (article.featuredImage) {
         sitemap += '    <image:image>\n';
         sitemap += `      <image:loc>${article.featuredImage}</image:loc>\n`;
-        sitemap += `      <image:title><![CDATA[${article.title}]]></image:title>\n`;
+        sitemap += `      <image:title><![CDATA[${escapedTitle}]]></image:title>\n`;
         sitemap += '    </image:image>\n';
       }
       
@@ -606,7 +611,7 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
-// ============ 21. ROBOTS.TXT endpoint (optional) ============
+// ============ 21. ROBOTS.TXT endpoint ============
 app.get('/robots.txt', (req, res) => {
   const robots = `# robots.txt for مناظرِ اہلسنت وجماعت
 User-agent: *
