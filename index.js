@@ -273,17 +273,19 @@ app.get('/api/articles/slug/:slug', async (req, res) => {
   }
 });
 
-// ============ 8. GET ALL ARTICLES (Public - with pagination) ============
+// ============ 8. GET ALL ARTICLES (Public - with pagination & category filter) ============
 app.get('/api/articles', async (req, res) => {
   try {
     const { limit = 10, page = 1, category } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     
-    let query = db.collection('articles')
-      .orderBy('createdAt', 'desc');
+    let query = db.collection('articles').orderBy('createdAt', 'desc');
     
-    if (category && category !== 'all') {
-      query = query.where('category', '==', category);
+    // Fix: Properly handle category filter with Unicode/Urdu text
+    if (category && category !== 'all' && category !== 'undefined' && category !== 'null') {
+      // Decode URI component if needed and compare as string
+      const decodedCategory = decodeURIComponent(category);
+      query = query.where('category', '==', decodedCategory);
     }
     
     const articlesSnapshot = await query.get();
@@ -308,7 +310,7 @@ app.get('/api/articles', async (req, res) => {
     });
   } catch (error) {
     console.error('Get articles error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
 
