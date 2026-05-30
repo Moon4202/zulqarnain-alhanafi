@@ -6,8 +6,11 @@ const admin = require('firebase-admin');
 require('dotenv').config();
 
 const app = express();
+
+// ============ IMPORTANT: Increased body limit for large articles with images ============
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -151,7 +154,7 @@ app.post('/api/admin/articles', verifyToken, async (req, res) => {
     const articleData = {
       title,
       slug,
-      content, // HTML content with <strong>, <img> etc.
+      content,
       category: category || 'Uncategorized',
       featuredImage: featuredImage || '',
       images: images || [],
@@ -354,8 +357,7 @@ app.get('/api/categories', async (req, res) => {
     const categoriesSnapshot = await db.collection('categories').get();
     
     if (categoriesSnapshot.empty) {
-      // Return default categories if none exist
-      const defaultCategories = ['Islamic Articles', 'Ramadan', 'Hadith', 'Quran', 'Sunnah', 'Dua'];
+      const defaultCategories = ['اسلامی مضامین', 'رمضان', 'حدیث', 'قرآن', 'سنت', 'دعا'];
       return res.json({ success: true, categories: defaultCategories });
     }
     
@@ -418,7 +420,7 @@ app.get('/api/articles/search', async (req, res) => {
     const searchTerm = q.toLowerCase();
     const filteredArticles = allArticles.filter(article => 
       article.title.toLowerCase().includes(searchTerm) ||
-      article.content.toLowerCase().includes(searchTerm) ||
+      (article.content && article.content.toLowerCase().includes(searchTerm)) ||
       (article.tags && article.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
     );
     
