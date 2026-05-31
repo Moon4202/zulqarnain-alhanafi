@@ -105,7 +105,20 @@ app.post('/api/admin/verify', verifyToken, (req, res) => {
   res.json({ success: true, admin: req.admin });
 });
 
-// ============ 3. CREATE NEW ARTICLE ============
+// ============ 3. GET FIREBASE STORAGE CUSTOM TOKEN (For secure image uploads) ============
+app.post('/api/get-storage-token', verifyToken, async (req, res) => {
+  try {
+    const uid = req.admin.adminId;
+    // Create a custom token for Firebase Auth
+    const customToken = await admin.auth().createCustomToken(uid);
+    res.json({ success: true, token: customToken });
+  } catch (error) {
+    console.error('Storage token error:', error);
+    res.status(500).json({ success: false, message: 'Error creating storage token' });
+  }
+});
+
+// ============ 4. CREATE NEW ARTICLE ============
 app.post('/api/admin/articles', verifyToken, async (req, res) => {
   try {
     const {
@@ -159,7 +172,7 @@ app.post('/api/admin/articles', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 4. UPDATE ARTICLE ============
+// ============ 5. UPDATE ARTICLE ============
 app.put('/api/admin/articles/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -214,7 +227,7 @@ app.put('/api/admin/articles/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 5. DELETE ARTICLE ============
+// ============ 6. DELETE ARTICLE ============
 app.delete('/api/admin/articles/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -226,7 +239,7 @@ app.delete('/api/admin/articles/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 6. GET SINGLE ARTICLE BY SLUG (Public) ============
+// ============ 7. GET SINGLE ARTICLE BY SLUG (Public) ============
 app.get('/api/articles/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -254,7 +267,7 @@ app.get('/api/articles/slug/:slug', async (req, res) => {
   }
 });
 
-// ============ 7. GET ALL ARTICLES (Public - with pagination & category filter) ============
+// ============ 8. GET ALL ARTICLES (Public - with pagination & category filter) ============
 app.get('/api/articles', async (req, res) => {
   try {
     const { limit = 10, page = 1, category } = req.query;
@@ -293,7 +306,7 @@ app.get('/api/articles', async (req, res) => {
   }
 });
 
-// ============ 8. GET ALL ARTICLES FOR ADMIN ============
+// ============ 9. GET ALL ARTICLES FOR ADMIN ============
 app.get('/api/admin/articles', verifyToken, async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -312,7 +325,7 @@ app.get('/api/admin/articles', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 9. GET SINGLE ARTICLE BY ID (Admin) ============
+// ============ 10. GET SINGLE ARTICLE BY ID (Admin) ============
 app.get('/api/admin/articles/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -329,7 +342,7 @@ app.get('/api/admin/articles/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 10. CATEGORIES - GET ALL ============
+// ============ 11. CATEGORIES - GET ALL ============
 app.get('/api/admin/categories/list', verifyToken, async (req, res) => {
   try {
     const categoriesSnapshot = await db.collection('categories').get();
@@ -344,7 +357,7 @@ app.get('/api/admin/categories/list', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 11. CATEGORIES - CREATE ============
+// ============ 12. CATEGORIES - CREATE ============
 app.post('/api/admin/categories', verifyToken, async (req, res) => {
   try {
     const { name, slug, description } = req.body;
@@ -365,7 +378,7 @@ app.post('/api/admin/categories', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 12. CATEGORIES - DELETE ============
+// ============ 13. CATEGORIES - DELETE ============
 app.delete('/api/admin/categories/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -377,7 +390,7 @@ app.delete('/api/admin/categories/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 13. PUBLIC CATEGORIES (for index page) ============
+// ============ 14. PUBLIC CATEGORIES (for index page) ============
 app.get('/api/categories/all', async (req, res) => {
   try {
     const categoriesSnapshot = await db.collection('categories').get();
@@ -392,7 +405,7 @@ app.get('/api/categories/all', async (req, res) => {
   }
 });
 
-// ============ 14. VERSES (Quran & Hadith) - GET ALL ============
+// ============ 15. VERSES (Quran & Hadith) - GET ALL ============
 app.get('/api/admin/verses', verifyToken, async (req, res) => {
   try {
     const versesSnapshot = await db.collection('verses').orderBy('createdAt', 'desc').get();
@@ -407,7 +420,7 @@ app.get('/api/admin/verses', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 15. VERSES - CREATE ============
+// ============ 16. VERSES - CREATE ============
 app.post('/api/admin/verses', verifyToken, async (req, res) => {
   try {
     const { content, type } = req.body;
@@ -427,7 +440,7 @@ app.post('/api/admin/verses', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 16. VERSES - DELETE ============
+// ============ 17. VERSES - DELETE ============
 app.delete('/api/admin/verses/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -439,7 +452,7 @@ app.delete('/api/admin/verses/:id', verifyToken, async (req, res) => {
   }
 });
 
-// ============ 17. PUBLIC VERSES (Random for index page) - WITH FALLBACK ============
+// ============ 18. PUBLIC VERSES (Random for index page) - WITH FALLBACK ============
 app.get('/api/verses/random', async (req, res) => {
   try {
     const { type } = req.query;
@@ -497,7 +510,7 @@ app.get('/api/verses/random', async (req, res) => {
   }
 });
 
-// ============ 18. GET FEATURED ARTICLES (Most viewed) ============
+// ============ 19. GET FEATURED ARTICLES (Most viewed) ============
 app.get('/api/articles/featured', async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -517,7 +530,7 @@ app.get('/api/articles/featured', async (req, res) => {
   }
 });
 
-// ============ 19. SEARCH ARTICLES ============
+// ============ 20. SEARCH ARTICLES ============
 app.get('/api/articles/search', async (req, res) => {
   try {
     const { q } = req.query;
@@ -550,7 +563,7 @@ app.get('/api/articles/search', async (req, res) => {
   }
 });
 
-// ============ 20. SITEMAP.XML - Dynamic sitemap for Google crawling (FIXED with proper escaping) ============
+// ============ 21. SITEMAP.XML - Dynamic sitemap for Google crawling ============
 app.get('/sitemap.xml', async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -563,7 +576,6 @@ app.get('/sitemap.xml', async (req, res) => {
     sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n';
     sitemap += '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n';
     
-    // Homepage
     sitemap += '  <url>\n';
     sitemap += `    <loc>${baseUrl}/</loc>\n`;
     sitemap += '    <lastmod>' + new Date().toISOString().split('T')[0] + '</lastmod>\n';
@@ -571,13 +583,11 @@ app.get('/sitemap.xml', async (req, res) => {
     sitemap += '    <priority>1.0</priority>\n';
     sitemap += '  </url>\n';
     
-    // Add all articles to sitemap
     articlesSnapshot.forEach(doc => {
       const article = doc.data();
       const articleDate = article.updatedAt?.toDate() || article.createdAt?.toDate() || new Date();
       const lastmod = articleDate.toISOString().split('T')[0];
       
-      // Escape special characters in title for XML (CRITICAL FIX)
       let escapedTitle = article.title || '';
       escapedTitle = escapedTitle
         .replace(/&/g, '&amp;')
@@ -612,7 +622,7 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
-// ============ 21. ROBOTS.TXT endpoint ============
+// ============ 22. ROBOTS.TXT endpoint ============
 app.get('/robots.txt', (req, res) => {
   const robots = `# robots.txt for مناظرِ اہلسنت وجماعت
 User-agent: *
@@ -627,7 +637,7 @@ Host: https://zulqarnain-hanafi-barelvi.lovestoblog.com
   res.send(robots);
 });
 
-// ============ 22. HEALTH CHECK ============
+// ============ 23. HEALTH CHECK ============
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -639,6 +649,7 @@ app.listen(PORT, () => {
   console.log(`📝 Available endpoints:`);
   console.log(`   POST   /api/admin/login`);
   console.log(`   POST   /api/admin/verify`);
+  console.log(`   POST   /api/get-storage-token (Admin only)`);
   console.log(`   GET    /api/articles`);
   console.log(`   GET    /api/articles/slug/:slug`);
   console.log(`   GET    /api/articles/search`);
