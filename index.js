@@ -43,6 +43,17 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// ============ GET FIREBASE CLIENT CONFIG (Securely from env) ============
+app.get('/api/firebase-config', (req, res) => {
+  res.json({
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    appId: process.env.FIREBASE_APP_ID
+  });
+});
+
 // ============ ADMIN SETUP - DISABLED FOR SECURITY ============
 app.post('/api/admin/setup', async (req, res) => {
   return res.status(403).json({ 
@@ -109,7 +120,6 @@ app.post('/api/admin/verify', verifyToken, (req, res) => {
 app.post('/api/get-storage-token', verifyToken, async (req, res) => {
   try {
     const uid = req.admin.adminId;
-    // Create a custom token for Firebase Auth
     const customToken = await admin.auth().createCustomToken(uid);
     res.json({ success: true, token: customToken });
   } catch (error) {
@@ -649,6 +659,7 @@ app.listen(PORT, () => {
   console.log(`📝 Available endpoints:`);
   console.log(`   POST   /api/admin/login`);
   console.log(`   POST   /api/admin/verify`);
+  console.log(`   GET    /api/firebase-config`);
   console.log(`   POST   /api/get-storage-token (Admin only)`);
   console.log(`   GET    /api/articles`);
   console.log(`   GET    /api/articles/slug/:slug`);
