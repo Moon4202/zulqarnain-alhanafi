@@ -62,7 +62,7 @@ app.post('/api/admin/setup', async (req, res) => {
   });
 });
 
-// ============ 1. ADMIN LOGIN ============
+// ============ 1. ADMIN LOGIN (Token never expires) ============
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -87,15 +87,14 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Token expires in 30 days
+    // Token never expires (no expiresIn option)
     const token = jwt.sign(
       { 
         adminId: adminSnapshot.docs[0].id, 
         email: adminData.email,
         role: adminData.role || 'admin'
       },
-      JWT_SECRET,
-      { expiresIn: '30d' }
+      JWT_SECRET
     );
 
     res.json({
