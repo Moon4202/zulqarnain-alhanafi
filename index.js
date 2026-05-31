@@ -87,6 +87,7 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Token expires in 30 days
     const token = jwt.sign(
       { 
         adminId: adminSnapshot.docs[0].id, 
@@ -94,7 +95,7 @@ app.post('/api/admin/login', async (req, res) => {
         role: adminData.role || 'admin'
       },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({
