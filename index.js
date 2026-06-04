@@ -87,7 +87,6 @@ app.post('/api/admin/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Token never expires (no expiresIn option)
     const token = jwt.sign(
       { 
         adminId: adminSnapshot.docs[0].id, 
@@ -116,7 +115,7 @@ app.post('/api/admin/verify', verifyToken, (req, res) => {
   res.json({ success: true, admin: req.admin });
 });
 
-// ============ 3. GET FIREBASE STORAGE CUSTOM TOKEN (For secure image uploads) ============
+// ============ 3. GET FIREBASE STORAGE CUSTOM TOKEN ============
 app.post('/api/get-storage-token', verifyToken, async (req, res) => {
   try {
     const uid = req.admin.adminId;
@@ -573,7 +572,7 @@ app.get('/api/articles/search', async (req, res) => {
   }
 });
 
-// ============ 21. SITEMAP.XML - Dynamic sitemap for Google crawling ============
+// ============ 21. SITEMAP.XML - Dynamic sitemap with proper XML escaping ============
 app.get('/sitemap.xml', async (req, res) => {
   try {
     const articlesSnapshot = await db.collection('articles')
@@ -586,6 +585,7 @@ app.get('/sitemap.xml', async (req, res) => {
     sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n';
     sitemap += '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n';
     
+    // Homepage
     sitemap += '  <url>\n';
     sitemap += `    <loc>${baseUrl}/</loc>\n`;
     sitemap += '    <lastmod>' + new Date().toISOString().split('T')[0] + '</lastmod>\n';
@@ -593,18 +593,22 @@ app.get('/sitemap.xml', async (req, res) => {
     sitemap += '    <priority>1.0</priority>\n';
     sitemap += '  </url>\n';
     
+    // Add all articles to sitemap with proper XML escaping
     articlesSnapshot.forEach(doc => {
       const article = doc.data();
       const articleDate = article.updatedAt?.toDate() || article.createdAt?.toDate() || new Date();
       const lastmod = articleDate.toISOString().split('T')[0];
       
+      // Escape special characters in title for XML (CRITICAL FIX for EntityRef error)
       let escapedTitle = article.title || '';
       escapedTitle = escapedTitle
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
+        .replace(/'/g, '&apos;')
+        .replace(/ﷺ/g, '&#xFDFA;') // Special character for Prophet (PBUH)
+        .replace(/ؑ/g, '&#xFDFB;'); // Special character for Alaihissalam
       
       sitemap += '  <url>\n';
       sitemap += `    <loc>${baseUrl}/post.html?slug=${encodeURIComponent(article.slug)}</loc>\n`;
